@@ -19,12 +19,14 @@ public class HeroKnight : MonoBehaviour {
     private bool                m_isWallSliding = false;
     private bool                m_grounded = false;
     private bool                m_rolling = false;
+    private bool                m_doubleJumped = false;
     private int                 m_facingDirection = 1;
     private int                 m_currentAttack = 0;
     private float               m_timeSinceAttack = 0.0f;
     private float               m_delayToIdle = 0.0f;
     private float               m_rollDuration = 8.0f / 14.0f;
     private float               m_rollCurrentTime;
+    private CoinManager m;    
 
 
     // Use this for initialization
@@ -37,6 +39,7 @@ public class HeroKnight : MonoBehaviour {
         m_wallSensorR2 = transform.Find("WallSensor_R2").GetComponent<Sensor_HeroKnight>();
         m_wallSensorL1 = transform.Find("WallSensor_L1").GetComponent<Sensor_HeroKnight>();
         m_wallSensorL2 = transform.Find("WallSensor_L2").GetComponent<Sensor_HeroKnight>();
+        m = GameObject.FindGameObjectWithTag("Text").GetComponent<CoinManager>();
     }
 
     // Update is called once per frame
@@ -57,6 +60,7 @@ public class HeroKnight : MonoBehaviour {
         if (!m_grounded && m_groundSensor.State())
         {
             m_grounded = true;
+            m_doubleJumped = false; // Reset double jump
             m_animator.SetBool("Grounded", m_grounded);
         }
 
@@ -146,13 +150,22 @@ public class HeroKnight : MonoBehaviour {
             
 
         //Jump
-        else if (Input.GetKeyDown("space") && m_grounded && !m_rolling)
+        else if (Input.GetKeyDown("space"))
         {
-            m_animator.SetTrigger("Jump");
-            m_grounded = false;
-            m_animator.SetBool("Grounded", m_grounded);
-            m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
-            m_groundSensor.Disable(0.2f);
+            if (m_grounded && !m_rolling)
+            {
+                m_animator.SetTrigger("Jump");
+                m_grounded = false;
+                m_animator.SetBool("Grounded", m_grounded);
+                m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
+                m_groundSensor.Disable(0.2f);
+            }
+            else if (!m_grounded && !m_doubleJumped && !m_rolling)
+            {
+                m_animator.SetTrigger("Jump");
+                m_doubleJumped = true;
+                m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
+            }
         }
 
         //Run
@@ -168,28 +181,38 @@ public class HeroKnight : MonoBehaviour {
         {
             // Prevents flickering transitions to idle
             m_delayToIdle -= Time.deltaTime;
-                if(m_delayToIdle < 0)
-                    m_animator.SetInteger("AnimState", 0);
+            if(m_delayToIdle < 0)
+                m_animator.SetInteger("AnimState", 0);
         }
     }
 
-    // Animation Events
-    // Called in slide animation.
-    void AE_SlideDust()
+   // Animation Events
+// Called in slide animation.
+void AE_SlideDust()
+{
+    Vector3 spawnPosition;
+
+    if (m_facingDirection == 1)
+        spawnPosition = m_wallSensorR2.transform.position;
+    else
+        spawnPosition = m_wallSensorL2.transform.position;
+
+    if (m_slideDust != null)
     {
-        Vector3 spawnPosition;
-
-        if (m_facingDirection == 1)
-            spawnPosition = m_wallSensorR2.transform.position;
-        else
-            spawnPosition = m_wallSensorL2.transform.position;
-
-        if (m_slideDust != null)
-        {
-            // Set correct arrow spawn position
-            GameObject dust = Instantiate(m_slideDust, spawnPosition, gameObject.transform.localRotation) as GameObject;
-            // Turn arrow in correct direction
-            dust.transform.localScale = new Vector3(m_facingDirection, 1, 1);
-        }
+        // Set correct arrow spawn position
+        GameObject dust = Instantiate(m_slideDust, spawnPosition, gameObject.transform.localRotation) as GameObject;
+        // Turn arrow in correct direction
+        dust.transform.localScale = new Vector3(m_facingDirection, 1, 1);
     }
+}
+
+private void OnTriggerEnter2D(Collider2D other)
+{
+    if (other.gameObject.tag == ("Coin"))
+    {
+        m.AddMoney();
+        Destroy(other.gameObject);
+    }
+}
+
 }
