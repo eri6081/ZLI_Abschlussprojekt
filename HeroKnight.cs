@@ -1,5 +1,7 @@
-	 using UnityEngine;
+using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
+
 
 public class HeroKnight : MonoBehaviour {
 
@@ -202,5 +204,20 @@ public class HeroKnight : MonoBehaviour {
             // Turn arrow in correct direction
             dust.transform.localScale = new Vector3(m_facingDirection, 1, 1);
         }
+
     }
+
+  private void OnTriggerEnter2D(Collider2D collision)
+{
+    if (collision.tag == "FallDetection")
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+   else if (collision.tag == "Flag")
+    {
+        SceneManager.LoadScene("Level 2");
+        }
+    }   
 }
+
+        
